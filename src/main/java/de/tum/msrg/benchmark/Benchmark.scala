@@ -10,30 +10,31 @@ import scala.collection._
 /**
   * Created by pxsalehi on 07.02.17.
   */
-object Benchmark{
-  val adv: Advertisement =
-    MessageFactory.createAdvertisementFromString("[class,eq,'temp'],[attr0,<,1000],[attr1,>,-1]")
-  val sub: Subscription =
-    MessageFactory.createSubscriptionFromString ("[class,eq,'temp'],[attr0,<,1000],[attr1,>,-1]")
+object Benchmark {
+  val noOfPublications = 10 * 1024
+  val benchmarkRounds = 10
+
   // all pubs and sub should match!
   def main(args: Array[String]) {
-    if (args.length < 4) {
-      sys.error("Run with: client_id broker_uri msg_size(bytes) batch_size")
+    if (args.length < 5) {
+      println("Run with: publisher|subscriber client_id broker_uri msg_size(bytes) batch_size")
+      sys.exit
     }
-    val pubs = createPubs(10240, 10*1024)
+    val client = args(0)
+    val clientID = args(1)
+    val brokerURI = args(2)
+    val msgSize = args(3).toInt
+    val batchSize = args(4).toInt
 
-  }
-
-  private def createPubs(count: Int, payloadSize: Int): List[Publication] = {
-    val pubs = mutable.ListBuffer[Publication]()
-    for(i <- 0 until count) {
-      val pubStr = s"[class,'temp'],[attr0,${Random.nextInt(1000)}],[attr1,${Random.nextInt(1000)}]"
-      val pub = MessageFactory.createPublicationFromString(pubStr)
-      val payload = new Array[Byte](payloadSize)
-      Random.nextBytes(payload)
-      pub.setPayload(payload)
-      pubs += pub
+    client.toLowerCase match {
+      case "publisher" => {
+        val publisher = new Publisher(clientID, brokerURI, msgSize, batchSize)
+        // connect to broker and advertise. After some pause run the benchmark N times
+      }
+      case "subscriber" => {
+        val subscriber = new Subscriber(clientID, brokerURI, batchSize)
+      }
+      case _ => println("ERROR: Client can only be publisher or subscriber!")
     }
-    return pubs.toList
   }
 }
