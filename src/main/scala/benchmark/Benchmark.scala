@@ -6,10 +6,10 @@ import ca.utoronto.msrg.padres.common.util.Sleep
   * Created by pxsalehi on 07.02.17.
   */
 object Benchmark {
-  val noOfPublications = 10 * 1024
-  val benchmarkRounds = 10
+  val noOfPublications = 2 * 1024
+  val benchmarkRounds = 2
   val msgSizes = List(512, 1024)//, 2*1024, 3*1024, 4*1024, 5*1024, 10*1024)
-  val batchSizes = List(1, 2, 4)//, 8, 16, 32, 64, 128, 256, 512, 1024)
+  val batchSizes = List(1, 2, 4, 8, 16)//, 32, 64, 128, 256, 512, 1024)
 
   // all pubs and sub should match!
   def main(args: Array[String]) {

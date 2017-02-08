@@ -15,7 +15,7 @@ class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
   def subscribe(): Unit = subscribe(sub)
 
   def receiveAndCheck(round: Int, msgSize: Int, batchSize: Int): Unit = {
-    print("Collecting publications")
+    println("Collecting publications")
     while(received != Benchmark.noOfPublications)
       Sleep.sleep(1000)
     received = 0
@@ -26,7 +26,6 @@ class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
     if (msg.getType.equals(MessageType.PUBLICATION)) {
       // check correctness
       received += 1
-      print(".")
     }
   }
 
