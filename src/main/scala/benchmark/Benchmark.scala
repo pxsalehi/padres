@@ -1,4 +1,4 @@
-package de.tum.msrg.benchmark
+package benchmark
 
 import ca.utoronto.msrg.padres.common.util.Sleep
 
@@ -13,15 +13,13 @@ object Benchmark {
 
   // all pubs and sub should match!
   def main(args: Array[String]) {
-    if (args.length < 5) {
-      println("Run with: publisher|subscriber client_id broker_uri msg_size(bytes) batch_size")
+    if (args.length < 3) {
+      println("Run with: publisher|subscriber client_id broker_uri")
       sys.exit
     }
     val client = args(0)
     val clientID = args(1)
     val brokerURI = args(2)
-    val msgSize = args(3).toInt
-    val batchSize = args(4).toInt
 
     client.toLowerCase match {
       case "publisher" => {

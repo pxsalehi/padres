@@ -1,4 +1,4 @@
-package de.tum.msrg.benchmark
+package benchmark
 
 import ca.utoronto.msrg.padres.client.Client
 import ca.utoronto.msrg.padres.common.message.{Publication, Advertisement}

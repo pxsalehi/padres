@@ -22,14 +22,12 @@ ARGS=$*
 PATHSEP=':'
 
 # default values
-MEMORY_MIN=16  
-MEMORY_MAX=64 
+MEMORY_MAX=256
 CLIENT="benchmark.Benchmark"
 CLIENT_PATH=""
 CLIENT_ID=""
 CLIENT_IP=""
 BROKER_URI=""
-BG_PROCESS="&"
 
 CLASSPATH="${PADRES_HOME}/build/${PATHSEP}${CLIENT_PATH}"
 for LIB in `ls ${PADRES_HOME}/lib/*.jar`
@@ -37,8 +35,9 @@ do
 	CLASSPATH="${CLASSPATH}${PATHSEP}${LIB}"
 done
 
-JVM_ARGS="-Xms${MEMORY_MIN}m -Xmx${MEMORY_MAX}m -cp target/padres-broker-jar-with-dependencies.jar\
-     -Djava.security.policy=${PADRES_HOME}/etc/java.policy"
+JVM_ARGS="-J-Xmx${MEMORY_MAX}m \
+         -cp target/padres-broker-jar-with-dependencies.jar\
+         -Djava.security.policy=${PADRES_HOME}/etc/java.policy"
 
 if [ ! -z $CLIENT_IP ]; then
     JVM_ARGS="$JVM_ARGS -Djava.rmi.server.hostname=$CLIENT_IP"
@@ -46,9 +45,4 @@ fi
 
 # start the client
 CMD="scala $JVM_ARGS $CLIENT ${ARGS[@]}"
-
-if [ -z $BG_PROCESS ]; then
-	$CMD
-else
-	$CMD &
-fi
+$CMD
