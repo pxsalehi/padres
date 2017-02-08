@@ -15,7 +15,7 @@ class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
   def subscribe(): Unit = subscribe(sub)
 
   def receiveAndCheck(round: Int, msgSize: Int, batchSize: Int): Unit = {
-    println("Collecting publications...")
+    print("Collecting publications")
     while(received != Benchmark.noOfPublications)
       Sleep.sleep(1000)
     received = 0
@@ -23,8 +23,11 @@ class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
 
   override def processMessage(msg: Message): Unit = {
     super.processMessage(msg)
-    if (msg.getType.equals(MessageType.PUBLICATION))
+    if (msg.getType.equals(MessageType.PUBLICATION)) {
+      // check correctness
       received += 1
+      print(".")
+    }
   }
 
   def writeStats(filename: String): Unit = {

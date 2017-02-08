@@ -20,10 +20,12 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
   def advertise(): Unit = advertise(adv)
 
   def batchPublish(msgSize: Int, batchSize: Int): Unit = {
+    print("Sending publications")
     val pubs = createPubs(Benchmark.noOfPublications, msgSize)
     val batch = mutable.ListBuffer[Publication]()
     val startTime = System.currentTimeMillis()
     for (pub <- pubs) {
+      print(".")
       batch += pub
       if (batch.size == batchSize) {
         val batchedPub = batch.head
