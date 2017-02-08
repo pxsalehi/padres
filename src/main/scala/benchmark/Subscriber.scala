@@ -15,10 +15,10 @@ class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
   def subscribe(): Unit = subscribe(sub)
 
   def receiveAndCheck(round: Int, msgSize: Int, batchSize: Int): Unit = {
-    println("Collecting publications")
-    while(received != Benchmark.noOfPublications)
-      Sleep.sleep(1000)
-    received = 0
+    println("Collecting publications...")
+    while(received < Benchmark.noOfPublications)
+      // busy loop
+    received -= Benchmark.noOfPublications
   }
 
   override def processMessage(msg: Message): Unit = {
