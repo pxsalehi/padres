@@ -27,7 +27,7 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
       batch += pub
       if (batch.size == batchSize) {
         val batchedPub = batch.head
-        batchedPub.setPayload(batch.tail)
+        batchedPub.setPayload(batch.toList) // set whole batch as payload
         publish(batchedPub)
         batch.clear()
       }
@@ -37,7 +37,12 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
   }
 
   def writeStats(filename: String): Unit = {
-
+    val groupedResults = results.groupBy(r => (r._1, r._2))
+    val aggResults = for { k <- groupedResults.keys
+                           rs = groupedResults(k).map(_._3) } yield (k, rs)
+    aggResults.foreach{
+      case (params, results) => println(params + ": " + results.mkString(" "))
+    }
   }
 
   private def createPubs(count: Int, payloadSize: Int): List[Publication] = {
