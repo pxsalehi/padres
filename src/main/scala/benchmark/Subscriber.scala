@@ -11,14 +11,13 @@ import ca.utoronto.msrg.padres.common.util.Sleep
 class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
   val sub: Subscription = createSubscriptionFromString ("[class,eq,'temp'],[attr0,<,1000],[attr1,>,-1]")
   var received = 0
+  var done: Boolean = false
 
   def subscribe(): Unit = subscribe(sub)
 
   def receiveAndCheck(round: Int, msgSize: Int, batchSize: Int): Unit = {
     println("Collecting publications...")
-    while(received < Benchmark.noOfPublications)
-      // busy loop
-    received -= Benchmark.noOfPublications
+    done.wait
   }
 
   override def processMessage(msg: Message): Unit = {
@@ -26,6 +25,10 @@ class Subscriber(var id: String, var brokerURI: String) extends Client(id) {
     if (msg.getType.equals(MessageType.PUBLICATION)) {
       // check correctness
       received += 1
+      if (received == Benchmark.noOfPublications) {
+        received = 0
+        done.notify
+      }
     }
   }
 
