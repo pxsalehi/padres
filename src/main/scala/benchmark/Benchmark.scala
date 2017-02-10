@@ -26,7 +26,7 @@ object Benchmark {
         val publisher = new Publisher(clientID, brokerURI)
         // connect to broker and advertise. After some pause run the benchmark N times
         publisher connect brokerURI
-        publisher.advertise
+        publisher.advertise()
         Sleep.sleep(6000)  // wait 5 seconds for sub
         for (round <- 1 to benchmarkRounds; msgSize <- msgSizes; batchSize <- batchSizes) {
           println(s"Running benchmark $round: message size = $msgSize, batch size = $batchSize")
@@ -35,14 +35,14 @@ object Benchmark {
         }
         publisher.writeStats("publisher_benchmark")
         println("Publisher finished running benchmark!")
-        publisher shutdown
+        publisher shutdown()
       }
       case "subscriber" => {
         val subscriber = new Subscriber(clientID, brokerURI)
         subscriber.connect(brokerURI)
         // wait for advertisement then subscribe
         Sleep.sleep(3000)
-        subscriber.subscribe
+        subscriber.subscribe()
         for (round <- 1 to benchmarkRounds; msgSize <- msgSizes; batchSize <- batchSizes) {
           subscriber.receiveAndCheck(round, msgSize, batchSize)
           println(s"Received all messages for benchmark $round: " +
@@ -50,7 +50,7 @@ object Benchmark {
         }
         subscriber.writeStats("subscriber_benchmark")
         println("Subscriber finished running benchmark!")
-        subscriber.shutdown
+        subscriber.shutdown()
       }
       case _ => println("ERROR: Client can only be publisher or subscriber!")
     }
