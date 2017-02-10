@@ -22,7 +22,7 @@ ARGS=$*
 PATHSEP=':'
 
 # default values
-MEMORY_MAX=256
+MEMORY_MAX=6
 CLIENT="benchmark.Benchmark"
 CLIENT_PATH=""
 CLIENT_ID=""
@@ -35,7 +35,7 @@ do
 	CLASSPATH="${CLASSPATH}${PATHSEP}${LIB}"
 done
 
-JVM_ARGS="-J-Xmx${MEMORY_MAX}m \
+JVM_ARGS="-J-Xmx${MEMORY_MAX}g \
          -cp target/padres-broker-jar-with-dependencies.jar\
          -Djava.security.policy=${PADRES_HOME}/etc/java.policy"
 

@@ -23,7 +23,7 @@ ARGS=$*
 
 # default values
 MEMORY_MIN=128	
-MEMORY_MAX=512	
+MEMORY_MAX=4
 BROKER_URI=""
 START_BG="&"
 PATHSEP=':'
@@ -101,7 +101,7 @@ do
 done
 
 # Start the broker
-CMD="java -Xms${MEMORY_MIN}m -Xmx${MEMORY_MAX}m 
+CMD="java -Xms${MEMORY_MIN}m -Xmx${MEMORY_MAX}g
           -Djava.rmi.server.codebase=file:${PADRES_HOME}/build/
           -cp target/padres-broker-jar-with-dependencies.jar -Djava.awt.headless=true
           -Djava.security.policy=${PADRES_HOME}/etc/java.policy 
