@@ -6,8 +6,8 @@ import ca.utoronto.msrg.padres.common.util.Sleep
   * Created by pxsalehi on 07.02.17.
   */
 object Benchmark {
-  val noOfPublications = 1 * 512
-  val benchmarkRounds = 2
+  val noOfPublications = 3 * 1024
+  val benchmarkRounds = 5
   val msgSizes = List(512, 1024, 2*1024, 3*1024, 4*1024)//, 5*1024)
   val batchSizes = List(1, 2, 4, 8, 16, 32, 64, 128, 256)//, 512)
 
@@ -31,7 +31,7 @@ object Benchmark {
         for (round <- 1 to benchmarkRounds; msgSize <- msgSizes; batchSize <- batchSizes) {
           println(s"Running benchmark $round: message size = $msgSize, batch size = $batchSize")
           publisher.batchPublish(msgSize, batchSize)
-          Sleep.sleep(3.0)
+          Sleep.sleep(4.0)
         }
         publisher.writeStats("publisher_benchmark")
         println("Publisher finished running benchmark!")

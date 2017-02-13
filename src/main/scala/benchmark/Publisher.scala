@@ -87,11 +87,12 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
       res <- aggResults
       throughputs = res.times.map(Benchmark.noOfPublications * 1000.0 / _)
     } yield NormalizedResult(res.msgSize, res.batchSize, throughputs.sum / throughputs.size)
-    val baseThroughput = throughputs
-      .filter(r => (r.msgSize, r.batchSize) == (Benchmark.msgSizes.head, 1))
-      .head.value
+    val baseThroughputs = throughputs
+      .filter(r => r.batchSize == 1)
+      .collect{case NormalizedResult(msgSize, 1, tp) => msgSize -> tp}
+      .toMap
     val normalized = throughputs.map(
-      r => NormalizedResult(r.msgSize, r.batchSize, r.value/baseThroughput) )
+      r => NormalizedResult(r.msgSize, r.batchSize, baseThroughputs(r.msgSize) / r.value) )
     return normalized
   }
 
@@ -129,12 +130,12 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
 object Test {
   def main(args: Array[String]) {
     val publisher = new Publisher("p1", "testBroker")
-    val raw = List((512, 1, 654), (512, 2, 321), (512, 4, 234), (512, 8, 678), (512, 4, 678),
-      (1024, 1, 789), (1024, 2, 123), (1024, 4, 234), (1024, 8, 77), (1024, 8, 85), (1024, 2, 234)
+    val raw = List((512, 1, 654), (512, 2, 600), (512, 4, 500), (512, 8, 480), (512, 4, 510),
+      (1024, 1, 500), (1024, 2, 450), (1024, 4, 420), (1024, 8, 400), (1024, 8, 405), (1024, 2, 445)
     ).map(r => RawResult(r._1, r._2, r._3))
     publisher.calcAndWriteThroughputs(raw)
     val normalized = publisher.calcNormalizedResults(raw)
     val inter = publisher.interpolateResults(normalized)
-    publisher.writeBatchFactors(normalized ++ inter)
+    publisher.writeBatchFactors((normalized ++ inter).sortBy(r => (r.msgSize, r.batchSize)))
   }
 }
