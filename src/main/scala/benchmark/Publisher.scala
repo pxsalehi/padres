@@ -9,15 +9,18 @@ import ca.utoronto.msrg.padres.common.message.parser.MessageFactory
 import scala.collection._
 import scala.util.Random
 
+case class RawResult(msgSize: Int, batchSize: Int, time: Long)
+case class AggregatedResult(msgSize: Int, batchSize: Int, times: List[Long])
+case class NormalizedResult(msgSize: Int, batchSize: Int, value: Double)
+
 /**
   * Created by pxsalehi on 07.02.17.
   */
 class Publisher(var id: String, var brokerURI: String) extends Client(id) {
-  val adv: Advertisement = MessageFactory.createAdvertisementFromString(
-                            "[class,eq,'temp'],[attr0,<,1000],[attr1,>,-1]")
-
+  val adv: Advertisement = MessageFactory
+              .createAdvertisementFromString("[class,eq,'temp'],[attr0,<,1000],[attr1,>,-1]")
   // record time it takes to send all pubs for each pair of msg size and batch size in each round
-  val results = mutable.ListBuffer[(Int, Int, Long)]()
+  val rawResults = mutable.ListBuffer[RawResult]()
 
   def advertise(): Unit = advertise(adv)
 
@@ -36,40 +39,73 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
       }
     }
     val endTime = System.currentTimeMillis()
-    results += ((msgSize, batchSize, endTime - startTime))
+    rawResults += RawResult(msgSize, batchSize, endTime - startTime)
   }
 
   def writeStats(filename: String): Unit = {
-    val groupedResults = results.groupBy(r => (r._1, r._2))
-    val aggResults = (for { k <- groupedResults.keys
-                           rs = groupedResults(k).map(_._3) } yield (k, rs.toList) ).toList
+    calcAndWriteThroughputs(rawResults.toList)
+    val normalized = calcNormalizedResults(rawResults.toList)
+    // interpolate value for other batch sizes
+    val interpolatedResults = interpolateResults(normalized)
+    val all = (interpolatedResults ++ normalized).sortBy(r => (r.msgSize, r.batchSize))
+    writeBatchFactors(all)
+  }
+
+  def writeBatchFactors(results: List[NormalizedResult]): Unit = {
+    val batchWriter = Files.newBufferedWriter(Paths.get("batch_factors"))
+    results.foreach{
+      case NormalizedResult(msgSize, batchSize, result) =>
+        batchWriter.write(s"($msgSize,$batchSize)\t$result\n")}
+    batchWriter.close()
+  }
+
+  def calcAndWriteThroughputs(results: List[RawResult]): Unit = {
+    val groupedResults = results.groupBy(r => (r.msgSize, r.batchSize))
+    val aggResults = (for {
+      (msgSize, batchSize) <- groupedResults.keys
+      rs = groupedResults((msgSize, batchSize)).map(_.time)
+    } yield AggregatedResult(msgSize, batchSize, rs.toList)).toList
     // collect throughput values for batch size 1 and smallest message
-    val batchSize1Throughputs = for { r <- aggResults
-                                      if r._1 == (Benchmark.msgSizes.head, 1)
-                                      t <- r._2 } yield Benchmark.noOfPublications * 1000 / t
+    val batchSize1Throughputs = for {
+      res <- aggResults
+      if (res.msgSize, res.batchSize) == (Benchmark.msgSizes.head, 1)
+      t <- res.times
+    } yield Benchmark.noOfPublications * 1000 / t
     val tpWriter = Files.newBufferedWriter(Paths.get("throughputs"))
     batchSize1Throughputs.foreach(t => tpWriter.write(s"$t\n"))
     tpWriter.close()
+  }
+
+  def calcNormalizedResults(results: List[RawResult]): List[NormalizedResult] = {
+    val groupedResults = results.groupBy(r => (r.msgSize, r.batchSize))
+    val aggResults = (for {
+      (msgSize, batchSize) <- groupedResults.keys
+      rs = groupedResults((msgSize, batchSize)).map(_.time)
+    } yield AggregatedResult(msgSize, batchSize, rs.toList)).toList
     // calculate throughput and normalize
     val throughputs = for {
-      (params, results) <- aggResults
-      tps = results.map(Benchmark.noOfPublications * 1000.0 / _)
-    } yield (params, tps.sum / tps.size)
-    val baseThroughput = throughputs.filter(_._1 == (Benchmark.msgSizes.head, 1)).head._2
-    val normalized = throughputs.map{case (params, tp) => (params, tp/baseThroughput)}
+      res <- aggResults
+      throughputs = res.times.map(Benchmark.noOfPublications * 1000.0 / _)
+    } yield NormalizedResult(res.msgSize, res.batchSize, throughputs.sum / throughputs.size)
+    val baseThroughput = throughputs
+      .filter(r => (r.msgSize, r.batchSize) == (Benchmark.msgSizes.head, 1))
+      .head.value
+    val normalized = throughputs.map(
+      r => NormalizedResult(r.msgSize, r.batchSize, r.value/baseThroughput) )
+    return normalized
+  }
+
+  def interpolateResults(results: List[NormalizedResult]): List[NormalizedResult] = {
     // interpolate value for other batch sizes
     val interpolatedResults = for {
       msgSize <- Benchmark.msgSizes
-      (bs1, bs2) <- Benchmark.batchSizes.sliding(2, 1).collect{case x::y::nill => (x, y)}
+      (bs1, bs2) <- Benchmark.batchSizes.sliding(2, 1).collect{case x::y::Nil => (x, y)}
       batchSize <- (bs1 + 1) until bs2
-      bs1tp = normalized.filter(_._1 == (msgSize, bs1)).head._2
-      bs2tp = normalized.filter(_._1 == (msgSize, bs2)).head._2
+      bs1tp = results.filter(r => (r.msgSize, r.batchSize) == (msgSize, bs1)).head.value
+      bs2tp = results.filter(r => (r.msgSize, r.batchSize) == (msgSize, bs2)).head.value
       newtp = interpolate(bs1, bs1tp, bs2, bs2tp, batchSize)
-    } yield ((msgSize, batchSize), newtp)
-    val all = (interpolatedResults ++ normalized).sortBy(_._1)
-    val batchWriter = Files.newBufferedWriter(Paths.get("batch_factors"))
-    all.foreach{case (params, result) => batchWriter.write(s"$params\t$result\n")}
-    batchWriter.close()
+    } yield NormalizedResult(msgSize, batchSize, newtp)
+    return interpolatedResults
   }
 
   private def interpolate(x0: Double, y0: Double, x1: Double, y1: Double, x: Double): Double = {
@@ -87,5 +123,18 @@ class Publisher(var id: String, var brokerURI: String) extends Client(id) {
       pubs += pub
     }
     return pubs.toList
+  }
+}
+
+object Test {
+  def main(args: Array[String]) {
+    val publisher = new Publisher("p1", "testBroker")
+    val raw = List((512, 1, 654), (512, 2, 321), (512, 4, 234), (512, 8, 678), (512, 4, 678),
+      (1024, 1, 789), (1024, 2, 123), (1024, 4, 234), (1024, 8, 77), (1024, 8, 85), (1024, 2, 234)
+    ).map(r => RawResult(r._1, r._2, r._3))
+    publisher.calcAndWriteThroughputs(raw)
+    val normalized = publisher.calcNormalizedResults(raw)
+    val inter = publisher.interpolateResults(normalized)
+    publisher.writeBatchFactors(normalized ++ inter)
   }
 }
